@@ -1,0 +1,15 @@
+https://fr.vikidia.org/wiki/Bretzel
+bretzel:3
+an:1
+est:1
+sortir:1
+pain:1
+former:1
+noeud:1
+recouvrir:1
+grain:1
+gros:1
+sel:1
+sont:2
+originaire:1
+aussi:1

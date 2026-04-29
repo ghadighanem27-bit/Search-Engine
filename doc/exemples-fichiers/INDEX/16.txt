@@ -1,0 +1,12 @@
+https://fr.vikidia.org/wiki/Quiche
+quiche:2
+an:1
+est:2
+cuisiner:1
+tarte:1
+larder:1
+pouvoir:1
+faire:1
+avec:1
+poisson:1
+fromage:1

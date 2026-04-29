@@ -1,0 +1,16 @@
+https://fr.vikidia.org/wiki/Omelette
+omelette:2
+an:1
+est:3
+plat:1
+baser:1
+oeuf:2
+battre:1
+ensemble:1
+cuire:1
+facile:1
+faire:1
+exister:1
+plein:1
+variante:1
+recette:1

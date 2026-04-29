@@ -1,0 +1,14 @@
+https://fr.vikidia.org/wiki/Profiterole
+profiterole:3
+an:1
+est:2
+desservir:1
+fer:1
+vanille:1
+chantilly:1
+quelque:1
+fois:1
+glacer:1
+juste:1
+lien:1
+externe:1

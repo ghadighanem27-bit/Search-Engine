@@ -1,0 +1,7 @@
+https://fr.vikidia.org/wiki/Tempura
+an:1
+est:1
+plat:1
+japonner:1
+baser:1
+beignet:1

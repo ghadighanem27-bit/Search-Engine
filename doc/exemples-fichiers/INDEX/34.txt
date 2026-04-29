@@ -1,0 +1,7 @@
+https://fr.vikidia.org/wiki/Lassi
+an:1
+est:2
+boisson:1
+baser:1
+yaourt:1
+indien:1

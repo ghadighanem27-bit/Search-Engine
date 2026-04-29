@@ -1,0 +1,9 @@
+https://fr.vikidia.org/wiki/Empanada
+an:1
+est:2
+culinaire:1
+chilien:1
+chausson:1
+farci:1
+provenir:1
+aussi:1

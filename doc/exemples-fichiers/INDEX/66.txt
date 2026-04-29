@@ -1,0 +1,14 @@
+https://fr.vikidia.org/wiki/Pita
+an:1
+est:2
+pain:2
+peu:1
+former:2
+rond:1
+couramment:1
+sud-est:1
+servir:2
+accompagnement:1
+repas:1
+sandwich:1
+utilisation:1

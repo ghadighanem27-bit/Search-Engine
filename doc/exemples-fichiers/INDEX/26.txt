@@ -1,0 +1,16 @@
+https://fr.vikidia.org/wiki/Cheesecake
+an:1
+fromage:4
+est:2
+fer:1
+partir:1
+blanc:2
+exister:1
+nombreux:1
+recette:1
+varier:1
+pays:1
+autre:1
+battre:1
+dans:1
+monder:1

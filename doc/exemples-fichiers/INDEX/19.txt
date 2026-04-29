@@ -1,0 +1,14 @@
+https://fr.vikidia.org/wiki/Pesto
+an:1
+est:1
+culinaire:1
+italien:1
+baser:1
+feuiller:1
+basilic:1
+ail:1
+parmesan:1
+pignon:1
+mortier:1
+huiler:1
+olive:1
