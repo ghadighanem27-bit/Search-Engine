@@ -1,5 +1,8 @@
 package search_engine;
-
+import java.util.List;
+import java.nio.file.Path;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Arrays;
 
 public class IndexedPage {
@@ -22,7 +25,22 @@ public class IndexedPage {
 		}
 	}
 
-	// public IndexedPage(Path path) {}
+	 public IndexedPage(Path path) throws IOException {
+		List<String> lignes = Files.readAllLines(path);
+
+		if (lignes == null || lignes.isEmpty()) {
+			throw new IllegalArgumentException("Le fichier mis en parametre est vide");
+		}
+		this.url = lignes.get(0);
+		int totalMot = lignes.size() - 1;
+		this.words = new String[totalMot];
+		this.counts = new int[totalMot];
+		for (int i = 0; i < totalMot; i++) {
+			String[] parts = lignes.get(i + 1).split(":");
+			this.words[i] = parts[0];
+			this.counts[i] = Integer.parseInt(parts[1]);
+		}
+	 }
 	
 	
 	public IndexedPage(String text) throws IllegalStateException {
