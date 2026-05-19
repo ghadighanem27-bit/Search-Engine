@@ -44,14 +44,20 @@ public class IndexedPage {
 	
 	
 	public IndexedPage(String text) throws IllegalStateException {
-		String[] motOrdre = text.toLowerCase().split("[^a-zA-Z]+");
+		String[] tous = text.toLowerCase().split("[^a-zA-Z]+");
+		
+		// Compter les mots non vides
+		int nbValides = 0;
+		for (String m : tous) if (!m.isEmpty()) nbValides++;
+		
+		if (nbValides == 0) throw new IllegalStateException("Il n'y a pas de texte");
+		
+		String[] motOrdre = new String[nbValides];
+		int k = 0;
+		for (String m : tous) if (!m.isEmpty()) motOrdre[k++] = m;
+		
 		Arrays.sort(motOrdre);
 		
-		// si le premier element est vide, le texte ne contient aucun mot
-	    if (motOrdre.length == 0 || motOrdre[0].equals("")) {
-	        throw new IllegalStateException("Il n'y a pas de texte");
-	    }
-			
 		this.words = new String[motOrdre.length];
 		this.counts = new int[motOrdre.length];
 		int j = -1;
