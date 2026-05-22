@@ -19,7 +19,7 @@ public class IndexedPage {
 		this.words = new String[n];
 		this.counts = new int[n];
 		for (int i = 0; i < n; i++) {
-			String[] parts = lines[i + 1].split(":");
+			String[] parts = lines[i + 1].split(":",2);
 			this.words[i] = parts[0];
 			this.counts[i] = Integer.parseInt(parts[1]);
 		}
@@ -31,12 +31,12 @@ public class IndexedPage {
 		if (lines.isEmpty()) {
 			throw new IllegalArgumentException("Le fichier mis en parametre est vide");
 		}
-		this.url = lines.getFirst();
+		this.url = lines.get(0);
 		int totalWords = lines.size() - 1;
 		this.words = new String[totalWords];
 		this.counts = new int[totalWords];
 		for (int i = 0; i < totalWords; i++) {
-			String[] parts = lines.get(i + 1).split(":");
+			String[] parts = lines.get(i + 1).split(":",2);
 			this.words[i] = parts[0];
 			this.counts[i] = Integer.parseInt(parts[1]);
 		}
@@ -113,7 +113,7 @@ public class IndexedPage {
 	}
 
 	public String toString() {
-		return "IndexedPage [url =" + getUrl() + "]";
+		return "IndexedPage [url=" + getUrl() + "]";
 	}
 
 }

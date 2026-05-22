@@ -106,31 +106,32 @@ public class SearchEngineTests {
         // --- SearchEngine ---
 
         System.out.println("--- Test SearchEngine ---");
-        try {
-            URL location = SearchEngine.class.getProtectionDomain().getCodeSource().getLocation();
-            Path binFolder = Paths.get(location.toURI());
-            Path indexFolder = binFolder.resolve("INDEX");
+    try {
+        URL location = SearchEngine.class.getProtectionDomain().getCodeSource().getLocation();
+        Path binFolder = Paths.get(location.toURI());
+        Path indexFolder = binFolder.getParent().resolve("doc/exemples-fichiers/INDEX");
+        Path lemmesFolder = binFolder.getParent().resolve("doc/exemples-fichiers/LEMMES");
 
-            SearchEngine se = new SearchEngine(indexFolder);
+        SearchEngine se = new SearchEngine(indexFolder, lemmesFolder);
 
-            // On vérifie que le nombre de pages chargées est correct
-            System.out.println("  Nombre de pages indexées : " + se.getPagesNumber());
+        // On vérifie que le nombre de pages chargées est correct
+        System.out.println("  Nombre de pages indexées : " + se.getPagesNumber());
 
-            // On vérifie que getPage() retourne bien une page valide
-            System.out.println("   page indexée    : " + se.getPage(0));
+        // On vérifie que getPage() retourne bien une page valide
+        System.out.println("  Page indexée : " + se.getPage(0));
 
-            // On lance une recherche et on affiche les résultats les plus pertinents
-            System.out.println("  Résultats pour 'cerise flan' :");
-            se.printResults("cerise flan");
+        // On lance une recherche et on affiche les résultats les plus pertinents
+        System.out.println("  Résultats pour 'cerise flan' :");
+        se.printResults("cerise flan");
 
-        } catch (Exception e) {
+    } catch (Exception e) {
             System.out.println("  Erreur SearchEngine : " + e.getMessage());
-        }
-        System.out.println();
+    }
+            System.out.println();
 
 
 
-        System.out.println("Fin des tests.");
+            System.out.println("Fin des tests.");
     }
 }
 
