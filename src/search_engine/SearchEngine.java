@@ -1,15 +1,14 @@
 package search_engine;
 
-
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Arrays;
 import java.util.Scanner;
 
 public class SearchEngine {
@@ -20,7 +19,15 @@ public class SearchEngine {
     public SearchEngine(Path indexationDirectory) throws IOException {
         this.indexationDirectory = indexationDirectory;
 
+        // On utilise une liste temporaire car DirectoryStream ne nous donne pas 
+        // la taille totale à l'avance.
         List<IndexedPage> list = new ArrayList<>();
+        
+       
+        // On utilise Files.newDirectoryStream() avec le filtre "*.txt"
+        // pour ne récupérer que les fichiers .txt du dossier.
+        // L'utilisation du bloc "try-with-resources" permet de fermer le flux automatiquement.
+        // newDirectoryStream lève directement une IOException (ou NotDirectoryException) si le dossier est invalide.
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(indexationDirectory, "*.txt")) {
             for (Path file : stream) {
                 list.add(new IndexedPage(file));
@@ -28,7 +35,6 @@ public class SearchEngine {
         }
         this.pages = list.toArray(new IndexedPage[0]);
     }
-
 
     public IndexedPage getPage(int i) {
         return pages[i];
@@ -39,7 +45,9 @@ public class SearchEngine {
     }
 
     public SearchResult[] launchRequest(String requestString) {
-        
+        // On crée une IndexedPage temporaire à partir de la requête de l'utilisateur.
+        // Cela nous permet de réutiliser directement la méthode proximity() déjà définie
+        // dans IndexedPage, qui calcule la similarité entre deux pages.
         IndexedPage request = new IndexedPage(requestString);
 
         double[] scores = new double[pages.length];
@@ -47,13 +55,13 @@ public class SearchEngine {
         for (int i = 0; i < pages.length; i++) {
             scores[i] = request.proximity(pages[i]);
 
-            
+            // On compare le score avec un epsilon afin d'éviter le problème de précision des doubles
             if (scores[i] > 1e-10) {
                 resultCount++;
             }
         }
 
-        
+        // On construit le tableau final uniquement avec les pages ayant un score significatif
         SearchResult[] results = new SearchResult[resultCount];
         int resultIndex = 0;
         for (int i = 0; i < pages.length; i++) {
@@ -63,7 +71,7 @@ public class SearchEngine {
             }
         }
 
-        
+        // On utilise Arrays.sort() qui utilise la méthode compareTo redéfinie dans la classe SearchResult
         Arrays.sort(results);
 
         return results;
@@ -72,7 +80,8 @@ public class SearchEngine {
     public void printResults(String requestString) {
         SearchResult[] results = launchRequest(requestString);
 
-        
+        // Math.min() nous permet de ne jamais afficher plus de 15 résultats,
+        // tout en gérant le cas où il y en aurait moins sans risquer un ArrayIndexOutOfBoundsException.
         int max = Math.min(15, results.length);
         for (int i = 0; i < max; i++) {
             System.out.println(results[i]);
@@ -88,11 +97,14 @@ public class SearchEngine {
         SearchEngine se = new SearchEngine(indexFolder);
 
         if (args.length > 0) {
-            
+            // Mode one-shot : arguments interprétés comme des requêtes
+            // String.join() assemble tous les arguments de la ligne de commande en une seule
+            // chaîne séparée par des espaces.
             String request = String.join(" ", args);
             se.printResults(request);
         } else {
-           
+            // Mode interactif : on lit les requêtes au clavier jusqu'à ce que
+            // l'utilisateur tape "exit"
             Scanner scanner = new Scanner(System.in);
             System.out.println("Bienvenue, tapez 'exit' pour quitter.");
             while (true) {

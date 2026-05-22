@@ -17,6 +17,9 @@ public class SearchResult implements Comparable<SearchResult> {
 		return score;
 	}
 
+	// On implémente Comparable pour définir l'ordre naturel de SearchResult.
+	// Double.compare(b, a) au lieu de (a, b) permet d'inverser l'ordre naturel croissant
+	// et permet d'éviter les erreurs de précision lors de la soustraction de plusieurs doubles
 	@Override
 	public int compareTo(SearchResult other) {
 		return Double.compare(other.score, this.score);
