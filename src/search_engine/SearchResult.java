@@ -17,7 +17,6 @@ public class SearchResult implements Comparable<SearchResult> {
 		return score;
 	}
 
-	// Tri décroissant : le plus pertinent en premier
 	@Override
 	public int compareTo(SearchResult other) {
 		return Double.compare(other.score, this.score);
