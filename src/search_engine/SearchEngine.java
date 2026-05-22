@@ -124,3 +124,4 @@ public class SearchEngine {
 }
 // Pour exécuter, se placer dans le dossier bin et lancer :
 // java -cp . search_engine.SearchEngine cerise flan
+

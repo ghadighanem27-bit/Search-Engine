@@ -30,3 +30,4 @@ public class SearchResult implements Comparable<SearchResult> {
 		return "SearchResult [url=" + url + ", score=" + score + "]";
 	}
 }
+
