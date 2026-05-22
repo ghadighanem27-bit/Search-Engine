@@ -1,6 +1,4 @@
-//voir les fonctions de la SAE
-
-package search_engine_tests;
+package search_engine;
 
 public class SearchResult implements Comparable<SearchResult> {
 	private String url;

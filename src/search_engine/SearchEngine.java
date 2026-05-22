@@ -1,6 +1,3 @@
-//revoir les fonctions si elle respect la SAE
-
-
 package search_engine;
 
 import java.io.IOException;
@@ -16,35 +13,32 @@ public class SearchEngine {
     private IndexedPage[] pages;
     private Path indexationDirectory;
 
-    // Charge tous les fichiers d'index depuis le dossier donné
     public SearchEngine(Path indexationDirectory) throws IOException {
-        this.indexationDirectory = indexationDirectory; // Assignation ajoutée
-        List<IndexedPage> liste = new ArrayList<>();
+        this.indexationDirectory = indexationDirectory;
+        List<IndexedPage> list = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(indexationDirectory, "*.txt")) {
-            for (Path fichier : stream) {
-                liste.add(new IndexedPage(fichier));
+            for (Path file : stream) {
+                list.add(new IndexedPage(file));
             }
         }
-        this.pages = liste.toArray(new IndexedPage[0]);
+        this.pages = list.toArray(new IndexedPage[0]);
     }
 
-    // Calcule et retourne les résultats triés pour une requête
     public List<SearchResult> getResults(String requestString) {
-        IndexedPage requete = new IndexedPage(requestString);
-        List<SearchResult> resultats = new ArrayList<>();
+        IndexedPage request = new IndexedPage(requestString);
+        List<SearchResult> results = new ArrayList<>();
 
         for (IndexedPage page : pages) {
-            double score = requete.proximity(page);
+            double score = request.proximity(page);
             if (score > 0) {
-                resultats.add(new SearchResult(page.getUrl(), score));
+                results.add(new SearchResult(page.getUrl(), score));
             }
         }
 
-        Collections.sort(resultats);
-        return resultats;
+        Collections.sort(results);
+        return results;
     }
 
-    // Retourne la page à l'index i
     public IndexedPage getPage(int i) {
         if (i >= 0 && i < pages.length) {
             return pages[i];
@@ -52,23 +46,20 @@ public class SearchEngine {
         throw new IndexOutOfBoundsException("L'index " + i + " est hors limites.");
     }
 
-    // Retourne le nombre total de pages indexées
     public int getPagesNumber() {
         return pages.length;
     }
 
-    // Lance la requête et retourne un tableau de résultats
-    public SearchResult[] launchRequest(String requeString) {
-        List<SearchResult> resultats = getResults(requeString);
-        return resultats.toArray(new SearchResult[0]);
+    public SearchResult[] launchRequest(String requestString) {
+        List<SearchResult> results = getResults(requestString);
+        return results.toArray(new SearchResult[0]);
     }
 
-    // Affiche les 15 meilleurs résultats
     public void printResults(String requestString) {
-        List<SearchResult> resultats = getResults(requestString);
-        int max = Math.min(15, resultats.size());
+        List<SearchResult> results = getResults(requestString);
+        int max = Math.min(15, results.size());
         for (int i = 0; i < max; i++) {
-            System.out.println(resultats.get(i));
+            System.out.println(results.get(i));
         }
     }
 }
