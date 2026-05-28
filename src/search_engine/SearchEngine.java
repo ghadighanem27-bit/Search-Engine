@@ -24,13 +24,15 @@ public class SearchEngine {
         // la taille totale à l'avance.
         List<IndexedPage> list = new ArrayList<>();
 
-        // On utilise Files.newDirectoryStream() avec le filtre "*.txt"
-        // pour ne récupérer que les fichiers .txt du dossier.
+        // Les fichiers d'INDEX_FILES peuvent ne pas avoir d'extension.
+        // On parcourt donc tout le dossier puis on garde uniquement les fichiers réguliers.
         // L'utilisation du bloc "try-with-resources" permet de fermer le flux automatiquement.
         // newDirectoryStream lève directement une IOException (ou NotDirectoryException) si le dossier est invalide.
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(indexationDirectory, "*.txt")) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(indexationDirectory)) {
             for (Path file : stream) {
-                list.add(new IndexedPage(file));
+                if (Files.isRegularFile(file)) {
+                    list.add(new IndexedPage(file));
+                }
             }
         }
         this.pages = list.toArray(new IndexedPage[0]);
@@ -99,7 +101,7 @@ public class SearchEngine {
 
         URL location = SearchEngine.class.getProtectionDomain().getCodeSource().getLocation();
         Path binFolder = Paths.get(location.toURI());
-        Path indexFolder = binFolder.getParent().resolve("doc/exemples-fichiers/INDEX");
+        Path indexFolder = binFolder.getParent().resolve("doc/exemples-fichiers/INDEX_FILES");
         Path lemmesFolder = binFolder.getParent().resolve("doc/exemples-fichiers/LEMMES");
 
         // On passe les deux dossiers au constructeur
