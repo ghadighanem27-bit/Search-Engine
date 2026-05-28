@@ -4,11 +4,15 @@ import java.nio.file.Path;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class IndexedPage {
 	private String url;
 	private String[] words;
 	private int[] counts;
+	private Map<String, Integer> countByWord;
+	private double norm;
 
 	public IndexedPage(String[] lines) throws IllegalStateException {
 		if (lines.length == 0) {
@@ -23,6 +27,7 @@ public class IndexedPage {
 			this.words[i] = parts[0];
 			this.counts[i] = Integer.parseInt(parts[1]);
 		}
+		buildDerivedData();
 	}
 
 	 public IndexedPage(Path path) throws IOException {
@@ -40,6 +45,7 @@ public class IndexedPage {
 			this.words[i] = parts[0];
 			this.counts[i] = Integer.parseInt(parts[1]);
 		}
+		buildDerivedData();
 	 }
 	
 	
@@ -72,6 +78,17 @@ public class IndexedPage {
 		}
 		this.words = Arrays.copyOf(this.words, uniqueIndex + 1);
 		this.counts = Arrays.copyOf(this.counts, uniqueIndex + 1);
+		buildDerivedData();
+	}
+
+	private void buildDerivedData() {
+		this.countByWord = new HashMap<>();
+		double sum = 0;
+		for (int i = 0; i < this.words.length; i++) {
+			this.countByWord.put(this.words[i], this.counts[i]);
+			sum += (double) this.counts[i] * this.counts[i];
+		}
+		this.norm = Math.sqrt(sum);
 	}
 
 	public String getUrl() {
@@ -79,21 +96,11 @@ public class IndexedPage {
 	}
 
 	public double getNorm() {
-		double sum = 0;
-		for (int count : counts) {
-			sum += Math.pow(count, 2);
-		}
-		return Math.sqrt(sum);
+		return norm;
 	}
 
 	public int getCount(String word) {
-		for (int i = 0; i <  words.length; i++) {
-			if (word.equals(words[i])) {
-				return counts[i];
-			}
-		
-		}
-		return 0;
+		return countByWord.getOrDefault(word, 0);
 	}
 
 	public double getPonderation(String word) {
@@ -104,11 +111,18 @@ public class IndexedPage {
 	}
 
 	public double proximity(IndexedPage page) {
+		if (this.norm == 0 || page.norm == 0) {
+			return 0;
+		}
 		double sum = 0;
 
-        for (String word : this.words) {
-            sum += this.getPonderation(word) * page.getPonderation(word);
-        }
+		for (int i = 0; i < this.words.length; i++) {
+			int countInPage = page.getCount(this.words[i]);
+			if (countInPage == 0) {
+				continue;
+			}
+			sum += ((double) this.counts[i] / this.norm) * ((double) countInPage / page.norm);
+		}
 		return sum;
 	}
 

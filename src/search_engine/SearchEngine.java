@@ -58,6 +58,9 @@ public class SearchEngine {
         // dans IndexedPage, qui calcule la similarité entre deux pages.
         // On lemmatise la requête avant de la traiter
         String requeteLemmatisee = lemmatiseur.lemmatizeQuery(requestString);
+        if (requeteLemmatisee.isBlank()) {
+            return new SearchResult[0];
+        }
         IndexedPage request = new IndexedPage(requeteLemmatisee);
 
         double[] scores = new double[pages.length];

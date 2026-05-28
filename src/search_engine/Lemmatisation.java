@@ -56,18 +56,18 @@ public class Lemmatisation {
 
         String lowerQuery = query.toLowerCase();
 
-        String cleanQuery = "";
+        StringBuilder cleanQuery = new StringBuilder();
         for (int i = 0; i < lowerQuery.length(); i++) {
             char c = lowerQuery.charAt(i);
             if (Character.isLetterOrDigit(c) || c == ' ') {
-                cleanQuery += c;
+                cleanQuery.append(c);
             } else {
-                cleanQuery += " ";
+                cleanQuery.append(' ');
             }
         }
 
-        String[] words = cleanQuery.split(" ");
-        String result = "";
+        String[] words = cleanQuery.toString().split(" ");
+        StringBuilder result = new StringBuilder();
 
         for (String word : words) {
 
@@ -84,14 +84,13 @@ public class Lemmatisation {
                 continue;
             }
 
-            if (result.length() == 0) {
-                result = lemma;
-            } else {
-                result = result + " " + lemma;
+            if (result.length() > 0) {
+                result.append(' ');
             }
+            result.append(lemma);
         }
 
-        return result;
+        return result.toString();
     }
 
     protected int getDictionarySize() {
