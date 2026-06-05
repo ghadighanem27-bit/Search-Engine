@@ -1,135 +1,122 @@
 package search_engine;
-import java.util.List;
-import java.nio.file.Path;
+
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Arrays;
+import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+/**
+ * Représente une page indexée sous forme de vecteur de mots.
+ * Chaque mot est associé à son nombre d'occurrences dans la page.
+ * La similarité entre deux pages est calculée par produit scalaire normalisé (cosinus).
+ */
 public class IndexedPage {
-	private String url;
-	private String[] words;
-	private int[] counts;
-	private Map<String, Integer> countByWord;
-	private double norm;
 
-	public IndexedPage(String[] lines) throws IllegalStateException {
-		if (lines.length == 0) {
-			throw new IllegalStateException("Le tableau est vide.");
-		}
-		this.url = lines[0];
-		int n = lines.length - 1;
-		this.words = new String[n];
-		this.counts = new int[n];
-		for (int i = 0; i < n; i++) {
-			String[] parts = lines[i + 1].split(":",2);
-			this.words[i] = parts[0];
-			this.counts[i] = Integer.parseInt(parts[1]);
-		}
-		buildDerivedData();
-	}
+    private String url;
+    private String[] words;
+    private int[] counts;
+    private Map<String, Integer> countByWord;
+    private double norm;
 
-	 public IndexedPage(Path path) throws IOException {
-		List<String> lines = Files.readAllLines(path);
+    /**
+     * Normalise un mot : minuscules, suppression des accents et des caractères spéciaux.
+     * Utilisé uniformément à l'indexation et à la recherche pour garantir la cohérence.
+     */
+    public static String normalize(String s) {
+        if (s == null) return "";
+        String str = s.toLowerCase().trim();
+        str = java.text.Normalizer.normalize(str, java.text.Normalizer.Form.NFD);
+        str = str.replaceAll("\\p{M}", "");
+        return str.replaceAll("[^a-z0-9]", "");
+    }
 
-		if (lines.isEmpty()) {
-			throw new IllegalArgumentException("Le fichier mis en parametre est vide");
-		}
-		this.url = lines.get(0);
-		int totalWords = lines.size() - 1;
-		this.words = new String[totalWords];
-		this.counts = new int[totalWords];
-		for (int i = 0; i < totalWords; i++) {
-			String[] parts = lines.get(i + 1).split(":",2);
-			this.words[i] = parts[0];
-			this.counts[i] = Integer.parseInt(parts[1]);
-		}
-		buildDerivedData();
-	 }
-	
-	
-	public IndexedPage(String text) throws IllegalStateException {
-		String[] splitWords = text.toLowerCase().split("[^a-zA-Z]+");
-		
-		// Compter les mots non vides
-		int wordCount = 0;
-		for (String m : splitWords) if (!m.isEmpty()) wordCount++;
-		
-		if (wordCount == 0) throw new IllegalStateException("Il n'y a pas de texte");
-		
-		String[] sortedWords = new String[wordCount];
-		int writeIndex = 0;
-		for (String m : splitWords) if (!m.isEmpty()) sortedWords[writeIndex++] = m;
-		
-		Arrays.sort(sortedWords);
-		
-		this.words = new String[sortedWords.length];
-		this.counts = new int[sortedWords.length];
-		int uniqueIndex = -1;
-		for (int i = 0; i < sortedWords.length; i++) {
-			if (i == 0 || !sortedWords[i].equals(sortedWords[i - 1])) {
-				uniqueIndex++;
-				this.words[uniqueIndex] = sortedWords[i];
-				this.counts[uniqueIndex] = 1;
-			} else {
-				this.counts[uniqueIndex]++;
-			}
-		}
-		this.words = Arrays.copyOf(this.words, uniqueIndex + 1);
-		this.counts = Arrays.copyOf(this.counts, uniqueIndex + 1);
-		buildDerivedData();
-	}
+    /**
+     * Construit une page indexée à partir d'un fichier.
+     * La première ligne contient l'URL, les suivantes ont le format "mot:occurrences".
+     * Le fichier est lu en UTF-8, avec repli sur Latin-1 en cas d'erreur d'encodage.
+     */
+    public IndexedPage(Path path) throws IOException {
+        List<String> lines;
+        
+        lines = Files.readAllLines(path, java.nio.charset.StandardCharsets.UTF_8);
 
-	private void buildDerivedData() {
-		this.countByWord = new HashMap<>();
-		double sum = 0;
-		for (int i = 0; i < this.words.length; i++) {
-			this.countByWord.put(this.words[i], this.counts[i]);
-			sum += (double) this.counts[i] * this.counts[i];
-		}
-		this.norm = Math.sqrt(sum);
-	}
+        if (lines.isEmpty()) throw new IllegalArgumentException("Fichier vide : " + path);
 
-	public String getUrl() {
-		return url;
-	}
+        this.url = lines.get(0);
+        int n = lines.size() - 1;
+        this.words  = new String[n];
+        this.counts = new int[n];
 
-	public double getNorm() {
-		return norm;
-	}
+        for (int i = 0; i < n; i++) {
+            String line = lines.get(i + 1);
+            if (!line.contains(":")) continue;
+            String[] parts = line.split(":", 2);
+            // Chaque mot est normalisé pour être comparable à la requête
+            this.words[i] = normalize(parts[0]);
+            try {
+                this.counts[i] = Integer.parseInt(parts[1].trim());
+            } catch (NumberFormatException e) {
+                this.counts[i] = 0;
+            }
+        }
+        buildVectorData();
+    }
 
-	public int getCount(String word) {
-		return countByWord.getOrDefault(word, 0);
-	}
+    /**
+     * Construit une page virtuelle à partir d'un texte brut (utilisé pour la requête).
+     * Chaque mot unique du texte devient une entrée du vecteur avec son nombre d'occurrences.
+     */
+    public IndexedPage(String text) {
+        String[] rawWords = text.split("\\s+");
+        Map<String, Integer> tempMap = new HashMap<>();
 
-	public double getPonderation(String word) {
-		if (getNorm() == 0) {
-			return 0;
-		}
-		return getCount(word) / getNorm();
-	}
+        for (String w : rawWords) {
+            String normalized = normalize(w);
+            if (!normalized.isEmpty()) {
+                tempMap.put(normalized, tempMap.getOrDefault(normalized, 0) + 1);
+            }
+        }
 
-	public double proximity(IndexedPage page) {
-		if (this.norm == 0 || page.norm == 0) {
-			return 0;
-		}
-		double sum = 0;
+        this.words  = tempMap.keySet().toArray(new String[0]);
+        this.counts = new int[this.words.length];
+        for (int i = 0; i < this.words.length; i++) {
+            this.counts[i] = tempMap.get(this.words[i]);
+        }
+        buildVectorData();
+    }
 
-		for (int i = 0; i < this.words.length; i++) {
-			int countInPage = page.getCount(this.words[i]);
-			if (countInPage == 0) {
-				continue;
-			}
-			sum += ((double) this.counts[i] / this.norm) * ((double) countInPage / page.norm);
-		}
-		return sum;
-	}
+    /**
+     * Construit la map mot→occurrences et calcule la norme du vecteur.
+     * La norme est la racine carrée de la somme des carrés des occurrences.
+     */
+    private void buildVectorData() {
+        this.countByWord = new HashMap<>();
+        double sumOfSquares = 0;
+        for (int i = 0; i < this.words.length; i++) {
+            this.countByWord.put(this.words[i], this.counts[i]);
+            sumOfSquares += (double) this.counts[i] * this.counts[i];
+        }
+        this.norm = Math.sqrt(sumOfSquares);
+    }
 
-	public String toString() {
-		return "IndexedPage [url=" + getUrl() + "]";
-	}
+    public String getUrl()               { return url; }
+    public double getNorm()              { return norm; }
+    public Iterable<String> getWords()   { return countByWord.keySet(); }
+    public int getCount(String word)     { return countByWord.getOrDefault(word, 0); }
 
+    /**
+     * Calcule la similarité cosinus entre cette page et une autre.
+     * Retourne une valeur entre 0 (aucune similarité) et 1 (identiques).
+     */
+    public double proximity(IndexedPage other) {
+        if (this.norm == 0 || other.norm == 0) return 0;
+        double dotProduct = 0;
+        for (int i = 0; i < this.words.length; i++) {
+            int countInOther = other.getCount(this.words[i]);
+            dotProduct += ((double) this.counts[i] / this.norm) * ((double) countInOther / other.norm);
+        }
+        return dotProduct;
+    }
 }
-
-

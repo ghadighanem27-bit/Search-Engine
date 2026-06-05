@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Résultats : {{REQUETE}}</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Hervé — <span>{{REQUETE}}</span></h1>
+        </header>
+
+        <form class="search-bar" action="/" method="get">
+            <input type="text" name="recherche" value="{{REQUETE}}">
+            <button type="submit">Chercher</button>
+        </form>
+
+        <p class="results-header">Résultats</p>
+        <pre id="resultats">{{RESULTATS}}</pre>
+
+        <footer>
+            <a href="/">← Nouvelle recherche</a>
+            <span>Hervé 2026</span>
+        </footer>
+
+    </div>
+</body>
+</html>

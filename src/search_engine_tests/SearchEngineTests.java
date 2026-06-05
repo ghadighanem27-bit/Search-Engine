@@ -1,137 +1,95 @@
 package search_engine_tests;
 
-import search_engine.*;
-
+import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import search_engine.IndexedPage;
+import search_engine.SearchEngine;
+import search_engine.SearchResult;
 
 public class SearchEngineTests {
 
     public static void main(String[] args) {
 
-        IndexedPage page1 = null;
-        IndexedPage page2 = null;
-        IndexedPage page3 = null;
-        IndexedPage page4 = null;
-
-        try {
-            page1 = new IndexedPage(new String[] {"http://exemple.org/p1", "java:10", "code:5"});
-        } catch (IllegalStateException e) {
-            System.out.println("Erreur page1 : " + e.getMessage());
-        }
-
-        try {
-            page2 = new IndexedPage(new String[] {"http://exemple.org/p2", "java:5", "test:2"});
-        } catch (IllegalStateException e) {
-            System.out.println("Erreur page2 : " + e.getMessage());
-        }
-
-        try {
-            page3 = new IndexedPage("JAVA, java!   code... code");
-        } catch (IllegalStateException e) {
-            System.out.println("Erreur page3 : " + e.getMessage());
-        }
-
-
-        // --- Page 1 ---
-
-        if (page1 != null) {
-            System.out.println("--- Page 1 (constructeur par tableau) ---");
-            System.out.println("  Représentation          : " + page1);
-            System.out.println("  URL de la page          : " + page1.getUrl());
-            System.out.println("  Poids total             : " + page1.getNorm());
-            System.out.println("  Poids de 'java'         : " + page1.getPonderation("java"));
-            System.out.println("  Poids de 'code'         : " + page1.getPonderation("code"));
-            System.out.println("  Poids d'un mot absent   : " + page1.getPonderation("python"));
-            System.out.println("  Similarité avec page1   : " + page1.proximity(page1)); // attendu 1.0
-            if (page2 != null)
-                System.out.println("  Similarité avec page2   : " + page1.proximity(page2));
-            if (page3 != null)
-                System.out.println("  Similarité avec page3   : " + page1.proximity(page3));
-            System.out.println();
-        }
-
-
-        // --- Page 2 ---
-
-        if (page2 != null) {
-            System.out.println("--- Page 2 (constructeur par tableau) ---");
-            System.out.println("  Représentation          : " + page2);
-            System.out.println("  URL de la page          : " + page2.getUrl());
-            System.out.println("  Poids total             : " + page2.getNorm());
-            System.out.println("  Poids de 'java'         : " + page2.getPonderation("java"));
-            System.out.println("  Poids de 'test'         : " + page2.getPonderation("test"));
-            System.out.println("  Poids d'un mot absent   : " + page2.getPonderation("python"));
-            System.out.println("  Similarité avec page2   : " + page2.proximity(page2)); // attendu 1.0
-            if (page1 != null)
-                System.out.println("  Similarité avec page1   : " + page2.proximity(page1));
-            if (page3 != null)
-                System.out.println("  Similarité avec page3   : " + page2.proximity(page3));
-            System.out.println();
-        }
-
-
-        // --- Page 3 ---
-
-        if (page3 != null) {
-            System.out.println("--- Page 3 (constructeur par texte) ---");
-            System.out.println("  Texte brut              : \"JAVA, java!   code... code\"");
-            System.out.println("  Représentation          : " + page3);
-            System.out.println("  URL de la page          : " + page3.getUrl());
-            System.out.println("  Poids total             : " + page3.getNorm()); // attendu ~2.83
-            System.out.println("  Poids de 'java'         : " + page3.getPonderation("java")); // attendu ~0.71
-            System.out.println("  Poids de 'code'         : " + page3.getPonderation("code")); // attendu ~0.71
-            System.out.println("  Poids d'un mot absent   : " + page3.getPonderation("python"));
-            System.out.println("  Similarité avec page3   : " + page3.proximity(page3)); // attendu 1.0
-            if (page1 != null)
-                System.out.println("  Similarité avec page1   : " + page3.proximity(page1));
-            if (page2 != null)
-                System.out.println("  Similarité avec page2   : " + page3.proximity(page2));
-            System.out.println();
-        }
-
-
-        // --- Page 4 ---
-
-        System.out.println("--- Page 4 (constructeur par texte : texte vide) ---");
-        System.out.println("  Texte brut              : \"   \"");
-        try {
-            page4 = new IndexedPage("   ");
-        } catch (IllegalStateException e) {
-            System.out.println("  Exception attendue      : " + e.getMessage());
+        // --- Test 1 : Normalisation des mots ---
+        String t1 = IndexedPage.normalize("Java");
+        String t2 = IndexedPage.normalize("Météo");
+        String t3 = IndexedPage.normalize("anti-constitutionnellement !");
+        
+        System.out.println("--- Test 1 : Normalisation ---");
+        System.out.println("  'Java' -> '" + t1 + "'");
+        System.out.println("  'Météo' -> '" + t2 + "'");
+        System.out.println("  'anti-constitutionnellement !' -> '" + t3 + "'");
+        
+        if (t1.equals("java") && t2.equals("meteo") && t3.equals("anticonstitutionnellement")) {
+            System.out.println("Erreur page1 : OK");
+        } else {
+            System.out.println("Erreur page1 : Erreur de normalisation");
         }
         System.out.println();
 
-        // --- SearchEngine ---
+        // --- Test 2 : Page virtuelle (Texte brut) ---
+        IndexedPage queryPage = new IndexedPage("java code java");
+        int countJava = queryPage.getCount("java");
+        int countCode = queryPage.getCount("code");
+        double queryNorm = queryPage.getNorm();
+        
+        System.out.println("--- Test 2 : Page virtuelle ---");
+        System.out.println("  java : " + countJava);
+        System.out.println("  code : " + countCode);
+        System.out.println("  norme : " + queryNorm);
+        System.out.println();
 
-        System.out.println("--- Test SearchEngine ---");
-    try {
-        URL location = SearchEngine.class.getProtectionDomain().getCodeSource().getLocation();
-        Path binFolder = Paths.get(location.toURI());
-        Path indexFolder = binFolder.getParent().resolve("doc/exemples-fichiers/INDEX");
-        Path lemmesFolder = binFolder.getParent().resolve("doc/exemples-fichiers/LEMMES");
+        // --- Test 3 : Page indexée (Fichier) ---
+        IndexedPage filePage = null;
+        System.out.println("--- Test 3 : Page indexee ---");
+        try {
+            Path tempFile = Files.createTempFile("page_test_", ".txt");
+            Files.write(tempFile, List.of("http://mon-url-de-test.com/index.html", "Java:4", "Code:3"));
+            
+            filePage = new IndexedPage(tempFile);
+            
+            System.out.println("  url : " + filePage.getUrl());
+            System.out.println("  java : " + filePage.getCount("java"));
+            System.out.println("  code : " + filePage.getCount("code"));
+            System.out.println("  norme : " + filePage.getNorm());
+            
+            Files.deleteIfExists(tempFile);
+        } catch (IOException e) {
+            System.out.println("Erreur page1 : " + e.getMessage());
+        }
+        System.out.println();
 
-        SearchEngine se = new SearchEngine(indexFolder, lemmesFolder);
+        // --- Test 4 : Similarité Cosinus ---
+        System.out.println("--- Test 4 : Proximite ---");
+        if (queryPage != null && filePage != null) {
+            double sim = queryPage.proximity(filePage);
+            System.out.println("  proximite : " + sim);
+        } else {
+            System.out.println("Erreur page1 : Pages non initialisees");
+        }
+        System.out.println();
 
-        // On vérifie que le nombre de pages chargées est correct
-        System.out.println("  Nombre de pages indexées : " + se.getPagesNumber());
+        // --- Test 5 : Moteur de Recherche ---
+        System.out.println("--- Test 5 : SearchEngine ---");
+        try {
+            URL location = SearchEngine.class.getProtectionDomain().getCodeSource().getLocation();
+            Path binFolder = Paths.get(location.toURI());
+            Path indexFolder = binFolder.getParent().resolve(Paths.get("doc", "INDEX"));
+            Path lemmasFolder = binFolder.getParent().resolve(Paths.get("doc", "LEMMES"));
 
-        // On vérifie que getPage() retourne bien une page valide
-        System.out.println("  Page indexée : " + se.getPage(0));
+            SearchEngine engine = new SearchEngine(indexFolder, lemmasFolder);
+            System.out.println("  Pages chargees : " + engine.getPagesNumber());
 
-        // On lance une recherche et on affiche les résultats les plus pertinents
-        System.out.println("  Résultats pour 'cerise flan' :");
-        se.printResults("cerise flan");
-
-    } catch (Exception e) {
-            System.out.println("  Erreur SearchEngine : " + e.getMessage());
-    }
-            System.out.println();
-
-
-
-            System.out.println("Fin des tests.");
+            SearchResult[] results = engine.search("java");
+            for (int i = 0; i < Math.min(5, results.length); i++) {
+                System.out.println("  " + results[i]);
+            }
+        } catch (Exception e) {
+            System.out.println("Erreur SearchEngine : " + e.getMessage());
+        }
     }
 }
-
