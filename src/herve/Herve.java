@@ -14,7 +14,7 @@ import search_engine.SearchResult;
  */
 public class Herve {
 
-    private static final Path   DEFAULT_INDEX_DIR = Paths.get("doc", "exemples-fichiers", "INDEX");
+    private static final Path DEFAULT_INDEX_DIR = Paths.get(System.getProperty("user.home"), ".config", "herve", "INDEX");
     private static final int    DEFAULT_MAX       = Integer.MAX_VALUE;
     private static final double DEFAULT_THRESHOLD = 0.0;
     private static final int    DEFAULT_PORT      = 2026;
@@ -56,14 +56,14 @@ public class Herve {
      */
     private static Path parseLemmasDir(Path indexDir) {
         Path[] candidates = {
-            Paths.get("doc", "LEMMES"),
+            Paths.get("doc", "exemples-fichiers", "LEMMES"),
             indexDir.getParent() != null ? indexDir.getParent().resolve("LEMMES") : null,
             Paths.get(System.getProperty("user.home"), ".config", "herve", "LEMMES")
         };
         for (Path candidate : candidates) {
             if (candidate != null && Files.exists(candidate.resolve("dico.txt"))) return candidate;
         }
-        return Paths.get("doc", "LEMMES");
+        return Paths.get("doc", "exemple-fichiers", "LEMMES");
     }
 
     /**
