@@ -1,6 +1,6 @@
 package herve;
 
-import herve_web.HttpServer;
+import herve_web.WebServer; // Import de WebServer
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -193,15 +193,19 @@ public class Herve {
 
         try {
             validateIndexDir(indexDir);
-            HttpServer.start(indexDir, lemmasDir, max, threshold, port);
+
+            if (!isServerRunning(port)) {
+                // Utilisation de WebServer
+                WebServer.start(indexDir, lemmasDir, max, threshold, port);
+            } else {
+                System.out.println("Serveur déjà actif sur le port " + port);
+            }
 
             String url = initialQuery.isBlank()
                 ? "http://localhost:" + port
                 : "http://localhost:" + port + "/?recherche=" + java.net.URLEncoder.encode(initialQuery, "UTF-8");
 
             System.out.println("Ouvrez : " + url);
-
-            // Ouverture automatique du navigateur par défaut si l'environnement le supporte
             if (java.awt.Desktop.isDesktopSupported()) {
                 java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
             }
@@ -210,13 +214,30 @@ public class Herve {
         }
     }
 
+    private static boolean isServerRunning(int port) {
+        try {
+            java.net.URL url = java.net.URI.create("http://127.0.0.1:" + port + "/test").toURL();
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(500);
+            conn.setReadTimeout(500);
+            conn.setRequestMethod("GET");
+            int code = conn.getResponseCode();
+            if (code == 200) {
+                java.util.Scanner s = new java.util.Scanner(conn.getInputStream());
+                String body = s.useDelimiter("\\A").next();
+                s.close();
+                return "OK".equals(body.trim());
+            }
+        } catch (Exception e) {
+            // Pas de réponse = serveur inactif
+        }
+        return false;
+    }
+
     // ------------------------------------------------------------------ //
     //  Utilitaires                                                         //
     // ------------------------------------------------------------------ //
 
-    /**
-     * Affiche les résultats d'une recherche dans la console, dans la limite du nombre maximum.
-     */
     public static void printResults(SearchEngine engine, String query, int max, double threshold) {
         SearchResult[] results = engine.search(query, threshold);
         int total     = results.length;
