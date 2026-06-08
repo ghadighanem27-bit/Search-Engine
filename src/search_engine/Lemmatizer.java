@@ -1,102 +1,107 @@
 package search_engine;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Transforme les mots d'une requête en leur forme canonique (lemme).
- * Utilise un dictionnaire de lemmatisation et une liste noire de mots à exclure.
- * Tous les mots sont normalisés via IndexedPage.normalize() pour garantir
- * la cohérence avec les mots stockés dans les fichiers d'index.
- */
 public class Lemmatizer {
 
     private final Map<String, String> dictionary;
     private final Set<String> blacklist;
+    // Autocorrecteur initialisé avec les mots du dictionnaire
+    private final Autocorrection autocorrection;
 
-    /**
-     * Charge le dictionnaire et la liste noire depuis les fichiers indiqués.
-     */
     public Lemmatizer(String dictionaryPath, String blacklistPath) throws IOException {
         this.dictionary = new HashMap<>();
-        this.blacklist  = new HashSet<>();
+        this.blacklist = new HashSet<>();
         loadDictionary(dictionaryPath);
         loadBlacklist(blacklistPath);
+        // On initialise l'autocorrection avec tous les mots connus du dictionnaire
+        this.autocorrection = new Autocorrection(dictionary.keySet());
     }
 
-    /**
-     * Charge le dictionnaire de lemmatisation depuis un fichier texte.
-     * Chaque ligne a le format "forme:lemme".
-     * Les clés et valeurs sont normalisées pour correspondre au format des index.
-     */
-    private void loadDictionary(String path) throws IOException {
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(path), StandardCharsets.UTF_8)) {
+    private void loadDictionary(String dictionaryPath) throws IOException {
+        try (BufferedReader br = new BufferedReader(new FileReader(dictionaryPath))) {
             String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty()) continue;
-                String[] parts = line.split(":", 2);
-                if (parts.length == 2) {
-                    String key   = IndexedPage.normalize(parts[0]);
-                    String lemma = IndexedPage.normalize(parts[1]);
-                    this.dictionary.put(key, lemma);
+            while ((line = br.readLine()) != null) {
+                if (line.length() == 0) continue;
+                String[] parts = line.split(":");
+                if (parts.length >= 2) {
+                    this.dictionary.put(parts[0], parts[1]);
                 }
             }
         }
     }
 
-    /**
-     * Charge la liste noire des mots à ignorer lors d'une recherche.
-     * Les mots sont normalisés pour correspondre au format des index.
-     */
-    private void loadBlacklist(String path) throws IOException {
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(path), StandardCharsets.UTF_8)) {
+    private void loadBlacklist(String blacklistPath) throws IOException {
+        try (BufferedReader br = new BufferedReader(new FileReader(blacklistPath))) {
             String line;
-            while ((line = reader.readLine()) != null) {
-                String normalized = IndexedPage.normalize(line.trim());
-                if (!normalized.isEmpty()) this.blacklist.add(normalized);
+            while ((line = br.readLine()) != null) {
+                if (line.length() == 0) continue;
+                this.blacklist.add(line);
             }
         }
     }
 
-    /**
-     * Transforme une requête brute en une suite de lemmes normalisés.
-     * Les mots de moins de 3 caractères et ceux présents dans la liste noire sont ignorés.
-     * Chaque mot est d'abord normalisé, puis remplacé par son lemme si disponible.
-     */
     public String lemmatizeQuery(String query) {
-        if (query == null || query.isBlank()) return "";
+        if (query == null || query.length() == 0) return "";
 
-        // On extrait uniquement les lettres (y compris accentuées) pour nettoyer la ponctuation
-        String cleaned = query.toLowerCase().replaceAll("\\P{L}+", " ").trim();
-        String[] tokens = cleaned.split("\\s+");
-
-        StringBuilder result = new StringBuilder();
-        for (String token : tokens) {
-            // On ignore les mots trop courts, souvent non significatifs
-            if (token.length() <= 2) continue;
-
-            // Normalisation du mot pour être cohérent avec les clés du dictionnaire
-            String normalized = IndexedPage.normalize(token);
-            if (normalized.isEmpty()) continue;
-
-            // Remplacement par le lemme si présent dans le dictionnaire
-            String lemma = dictionary.getOrDefault(normalized, normalized);
-
-            // Exclusion des mots présents dans la liste noire
-            if (blacklist.contains(lemma)) continue;
-
-            if (result.length() > 0) result.append(" ");
-            result.append(lemma);
+        // Mise en minuscules + remplacement des caractères non alphabétiques par des espaces
+        String cleanQuery = "";
+        for (int i = 0; i < query.toLowerCase().length(); i++) {
+            char c = query.toLowerCase().charAt(i);
+            if (Character.isLetterOrDigit(c) || c == ' ') {
+                cleanQuery += c;
+            } else {
+                cleanQuery += " ";
+            }
         }
 
-        return result.toString();
+        String[] words = cleanQuery.split(" ");
+        String result = "";
+
+        for (String word : words) {
+            // On ignore les mots de 2 lettres ou moins
+            if (word.length() <= 2) continue;
+
+            String lemma;
+
+            if (this.dictionary.containsKey(word)) {
+                // Le mot est dans le dictionnaire : on prend son lemme directement
+                lemma = this.dictionary.get(word);
+            } else {
+                String correctedWord = autocorrection.correct(word);
+                
+                // On lemmatise le mot corrigé si possible
+                if (this.dictionary.containsKey(correctedWord)) {
+                    lemma = this.dictionary.get(correctedWord);
+                } else {
+                    lemma = correctedWord;
+                }
+            }
+
+            // On ignore les mots de la liste noire
+            if (this.blacklist.contains(lemma)) continue;
+
+            if (result.length() == 0) {
+                result = lemma;
+            } else {
+                result = result + " " + lemma;
+            }
+        }
+
+        return result;
+    }
+
+    public int getDictionarySize() {
+        return this.dictionary.size();
+    }
+
+    public Map<String, String> getFullDictionary() {
+        return this.dictionary;
     }
 }
