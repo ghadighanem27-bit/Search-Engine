@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -21,15 +22,25 @@ class RequestHandler implements HttpHandler {
     private final SearchEngine engine;
     private final int          maxResults;
     private final double       threshold;
+    private final Path         resourcesDir; // chemin absolu vers resources/
 
-    /**
-     * Initialise le gestionnaire en chargeant le moteur de recherche une seule fois.
-     * Toutes les requêtes HTTP ultérieures réutilisent ce même moteur.
-     */
     public RequestHandler(Path indexDir, Path lemmasDir, int maxResults, double threshold) throws IOException {
-        this.engine     = new SearchEngine(indexDir, lemmasDir);
-        this.maxResults = maxResults;
-        this.threshold  = threshold;
+        this.engine      = new SearchEngine(indexDir, lemmasDir);
+        this.maxResults  = maxResults;
+        this.threshold   = threshold;
+
+        // Résolution robuste : remonte depuis le .class jusqu'à la racine du projet
+        java.net.URL location = RequestHandler.class.getProtectionDomain().getCodeSource().getLocation();
+        
+        Path binFolder;
+        try {
+            binFolder = Paths.get(location.toURI());
+        } catch (URISyntaxException e) {
+            // On convertit l'erreur en IOException pour respecter la signature du constructeur
+            throw new IOException("Erreur lors de la conversion de l'URL en URI", e);
+        }
+        
+        this.resourcesDir = binFolder.getParent().resolve("resources");
     }
 
     @Override
@@ -53,7 +64,7 @@ class RequestHandler implements HttpHandler {
      */
     private void serveCssFile(HttpExchange exchange, String requestPath) throws IOException {
         try {
-            Path cssPath = Paths.get("resources", requestPath.substring(1));
+            Path cssPath = resourcesDir.resolve(requestPath.substring(1));
             if (Files.exists(cssPath)) {
                 byte[] cssBytes = Files.readAllBytes(cssPath);
                 exchange.getResponseHeaders().set("Content-Type", "text/css; charset=UTF-8");
@@ -72,7 +83,7 @@ class RequestHandler implements HttpHandler {
      */
     private String buildHtmlResponse(String queryString) {
         try {
-            Path htmlTemplate = Paths.get("resources", "resultat.html");
+            Path htmlTemplate = resourcesDir.resolve("resultat.html");
             String html = new String(Files.readAllBytes(htmlTemplate), StandardCharsets.UTF_8);
 
             String searchTerm   = "";
