@@ -22,8 +22,12 @@ class RequestHandler implements HttpHandler {
     private final int          maxResults;
     private final double       threshold;
     private final Path         assetsDir;
+    private final List<String> history = new ArrayList<>();
 
     public RequestHandler(Path indexDir, Path lemmasDir, int maxResults, double threshold) throws IOException {
+        this.engine     = new WandSearchEngine(indexDir, lemmasDir);
+        this.maxResults = maxResults;
+        this.threshold  = threshold;
         this.assetsDir  = Paths.get("src", "assets");
     }
 
@@ -96,7 +100,12 @@ class RequestHandler implements HttpHandler {
                     htmlHistory.append(String.format("<a href=\"/resultats.html?search=%s\" class=\"suggestion-tag\">%s</a>", encoded, h));
                     count++;
                 }
+                htmlHistory.append("</div>");
             }
+
+            // Insertion de l'historique dans le tag {{HISTORY}} du fichier index.html
+            return html.replace("{{HISTORY}}", htmlHistory.toString());
+
         } catch (Exception e) {
             return "<h1>Erreur</h1><p>" + e.getMessage() + "</p>";
         }
@@ -113,8 +122,11 @@ class RequestHandler implements HttpHandler {
                 searchTerm = extractParam(queryString, "q").trim();
             }
 
-            String searchTerm   = "";
-            String resultsBlock = "<p>Entrez un mot-clé pour lancer la recherche.</p>";
+            if (!searchTerm.isEmpty()) {
+                if (history.isEmpty() || !history.get(history.size() - 1).equals(searchTerm)) {
+                    history.add(searchTerm);
+                }
+            }
 
             String resultsHTML;
             if (searchTerm.isEmpty()) {

@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import search_engine.SearchEngine;
 import search_engine.SearchResult;
+import search_engine.WandSearchEngine;
 
 public class Herve {
 
@@ -132,7 +133,7 @@ public class Herve {
 
         try {
             validateIndexDir(indexDir);
-            SearchEngine engine = new SearchEngine(indexDir, lemmasDir);
+            SearchEngine engine = new WandSearchEngine(indexDir, lemmasDir);
             printResults(engine, query, max, threshold);
         } catch (Exception e) {
             System.err.println("Erreur : " + e.getMessage());
@@ -147,7 +148,7 @@ public class Herve {
 
         try {
             validateIndexDir(indexDir);
-            SearchEngine engine = new SearchEngine(indexDir, lemmasDir);
+            SearchEngine engine = new WandSearchEngine(indexDir, lemmasDir);
             System.out.println("Répertoire d'index : " + indexDir.toAbsolutePath());
             System.out.println("Bienvenue sur Hervé, moteur de recherche vectoriel. Tapez 'exit' pour quitter.");
 
