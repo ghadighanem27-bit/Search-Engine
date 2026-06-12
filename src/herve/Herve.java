@@ -26,7 +26,7 @@ public class Herve {
             return systemDefault;
         }
         // Sinon, on se replie sur l'index de test du projet
-        return Paths.get("doc", "exemples-fichiers", "INDEX");
+        return Paths.get("src", "assets", "exemples-fichiers", "INDEX");
     }
 
     public static void main(String[] args) {
@@ -59,16 +59,16 @@ public class Herve {
         return DEFAULT_INDEX_DIR;
     }
 
-    private static Path parseLemmasDir(Path indexDir) {
+   private static Path parseLemmasDir(Path indexDir) {
         Path[] candidates = {
-            Paths.get("doc", "exemples-fichiers", "LEMMES"),
+            Paths.get("src", "assets", "LEMMES"),
             indexDir.getParent() != null ? indexDir.getParent().resolve("LEMMES") : null,
             Paths.get(System.getProperty("user.home"), ".config", "herve", "LEMMES")
         };
         for (Path candidate : candidates) {
             if (candidate != null && Files.exists(candidate.resolve("dico.txt"))) return candidate;
         }
-        return Paths.get("doc", "exemples-fichiers", "LEMMES");
+        return Paths.get("src", "assets", "LEMMES"); 
     }
 
     private static int parseMax(String[] args) {

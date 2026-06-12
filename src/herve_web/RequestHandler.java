@@ -4,7 +4,6 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -13,34 +12,15 @@ import java.nio.file.Paths;
 import search_engine.SearchEngine;
 import search_engine.SearchResult;
 
-/**
- * Gestionnaire des requêtes HTTP du serveur Hervé.
- * Traite les fichiers CSS statiques et génère dynamiquement les pages HTML de résultats.
- */
 class RequestHandler implements HttpHandler {
 
     private final SearchEngine engine;
     private final int          maxResults;
     private final double       threshold;
-    private final Path         resourcesDir; // chemin absolu vers resources/
+    private final Path         assetsDir;
 
     public RequestHandler(Path indexDir, Path lemmasDir, int maxResults, double threshold) throws IOException {
-        this.engine      = new SearchEngine(indexDir, lemmasDir);
-        this.maxResults  = maxResults;
-        this.threshold   = threshold;
-
-        // Résolution robuste : remonte depuis le .class jusqu'à la racine du projet
-        java.net.URL location = RequestHandler.class.getProtectionDomain().getCodeSource().getLocation();
-        
-        Path binFolder;
-        try {
-            binFolder = Paths.get(location.toURI());
-        } catch (URISyntaxException e) {
-            // On convertit l'erreur en IOException pour respecter la signature du constructeur
-            throw new IOException("Erreur lors de la conversion de l'URL en URI", e);
-        }
-        
-        this.resourcesDir = binFolder.getParent().resolve("resources");
+        this.assetsDir  = Paths.get("src", "assets");
     }
 
     @Override
@@ -50,7 +30,11 @@ class RequestHandler implements HttpHandler {
 
         // Servir les fichiers CSS statiques
         if (requestPath.endsWith(".css")) {
-            serveCssFile(exchange, requestPath);
+            serveStaticFile(exchange, requestPath.substring(1), "text/css; charset=UTF-8");
+            return;
+        }
+        if (requestPath.endsWith(".svg")) {
+            serveStaticFile(exchange, requestPath.substring(1), "image/svg+xml");
             return;
         }
 
@@ -59,18 +43,22 @@ class RequestHandler implements HttpHandler {
         sendHtmlResponse(exchange, responseBody);
     }
 
-    /**
-     * Lit et envoie un fichier CSS depuis le répertoire source.
-     */
-    private void serveCssFile(HttpExchange exchange, String requestPath) throws IOException {
         try {
-            Path cssPath = resourcesDir.resolve(requestPath.substring(1));
-            if (Files.exists(cssPath)) {
-                byte[] cssBytes = Files.readAllBytes(cssPath);
-                exchange.getResponseHeaders().set("Content-Type", "text/css; charset=UTF-8");
-                exchange.sendResponseHeaders(200, cssBytes.length);
-                try (OutputStream os = exchange.getResponseBody()) {
-                    os.write(cssBytes);
+            Path template = assetsDir.resolve("index.html");
+            String html = new String(Files.readAllBytes(template), StandardCharsets.UTF_8);
+
+            StringBuilder htmlHistory = new StringBuilder();
+            if (!history.isEmpty()) {
+                // Utilisation des classes CSS de style.css (.suggestions, .suggestion-label, .suggestion-tag)
+                htmlHistory.append("<div class=\"suggestions\">");
+                htmlHistory.append("<span class=\"suggestion-label\">Dernières recherches :</span>");
+                
+                int count = 0;
+                for (int i = history.size() - 1; i >= 0 && count < 5; i--) {
+                    String h = history.get(i);
+                    String encoded = URLEncoder.encode(h, StandardCharsets.UTF_8);
+                    htmlHistory.append(String.format("<a href=\"/resultats.html?search=%s\" class=\"suggestion-tag\">%s</a>", encoded, h));
+                    count++;
                 }
             }
         } catch (Exception e) {
@@ -83,8 +71,9 @@ class RequestHandler implements HttpHandler {
      */
     private String buildHtmlResponse(String queryString) {
         try {
-            Path htmlTemplate = resourcesDir.resolve("resultat.html");
-            String html = new String(Files.readAllBytes(htmlTemplate), StandardCharsets.UTF_8);
+            Path template = assetsDir.resolve("resultats.html");
+            String html = new String(Files.readAllBytes(template), StandardCharsets.UTF_8);
+
 
             String searchTerm   = "";
             String resultsBlock = "<p>Entrez un mot-clé pour lancer la recherche.</p>";

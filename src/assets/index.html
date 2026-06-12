@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hervé — Moteur de recherche</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <div class="noise"></div>
+
+    <main class="hero">
+      <div class="logo-wrapper">
+        <img class="logo-icon" src="./doc/logo.svg" alt="Logo Hervé" />
+      </div>
+
+      <div class="title-block">
+        <h1 class="brand">
+          <span class="brand-her">Her</span><span class="brand-ve">vé</span>
+        </h1>
+        <p class="tagline">Cherchez autrement.</p>
+      </div>
+
+      <form class="search-form" action="/resultats.html" method="get">
+        <div class="search-pill">
+          <svg
+            class="search-icon"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            name="q"
+            placeholder="Que cherchez-vous ?"
+            autocomplete="off"
+            autofocus
+          />
+          <button type="submit" aria-label="Lancer la recherche">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </form>
+
+      {{HISTORY}}
+    </main>
+
+    <footer class="footer">
+      <span>© Hervé 2026</span>
+      <span class="dot">·</span>
+      <a href="#">Confidentialité</a>
+      <span class="dot">·</span>
+      <a href="#">Paramètres</a>
+    </footer>
+  </body>
+</html>
