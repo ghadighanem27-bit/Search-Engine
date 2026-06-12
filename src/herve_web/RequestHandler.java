@@ -5,12 +5,16 @@ import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import search_engine.SearchEngine;
 import search_engine.SearchResult;
+import search_engine.WandSearchEngine;
 
 class RequestHandler implements HttpHandler {
 
@@ -25,10 +29,10 @@ class RequestHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        String requestPath  = exchange.getRequestURI().getPath();
-        String queryString  = exchange.getRequestURI().getQuery();
+        String requestPath = exchange.getRequestURI().getPath();
+        String queryString = exchange.getRequestURI().getQuery();
 
-        // Servir les fichiers CSS statiques
+        // Gestion des fichiers statiques (CSS, images, etc.)
         if (requestPath.endsWith(".css")) {
             serveStaticFile(exchange, requestPath.substring(1), "text/css; charset=UTF-8");
             return;
@@ -38,11 +42,43 @@ class RequestHandler implements HttpHandler {
             return;
         }
 
-        // Générer la page HTML de résultats
-        String responseBody = buildHtmlResponse(queryString);
-        sendHtmlResponse(exchange, responseBody);
+        // Page d'accueil (index.html)
+        if (requestPath.equals("/") || requestPath.equals("/index.html")) {
+            String searchTerm = extractParam(queryString, "search").trim();
+            if (searchTerm.isEmpty()) {
+                searchTerm = extractParam(queryString, "q").trim();
+            }
+            
+            if (!searchTerm.isEmpty()) {
+                String responseBody = buildResultsPage(queryString);
+                sendResponse(exchange, responseBody, "text/html; charset=UTF-8");
+            } else {
+                String responseBody = buildIndexPage();
+                sendResponse(exchange, responseBody, "text/html; charset=UTF-8");
+            }
+            return;
+        }
+
+        // Page de résultats (resultats.html)
+        String responseBody = buildResultsPage(queryString);
+        sendResponse(exchange, responseBody, "text/html; charset=UTF-8");
     }
 
+    private void serveStaticFile(HttpExchange exchange, String relativePath, String contentType) throws IOException {
+        Path filePath = assetsDir.resolve(relativePath);
+        if (!Files.exists(filePath)) {
+            exchange.sendResponseHeaders(404, -1);
+            return;
+        }
+        byte[] bytes = Files.readAllBytes(filePath);
+        exchange.getResponseHeaders().set("Content-Type", contentType);
+        exchange.sendResponseHeaders(200, bytes.length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+        }
+    }
+
+    private String buildIndexPage() {
         try {
             Path template = assetsDir.resolve("index.html");
             String html = new String(Files.readAllBytes(template), StandardCharsets.UTF_8);
@@ -62,94 +98,99 @@ class RequestHandler implements HttpHandler {
                 }
             }
         } catch (Exception e) {
-            // Si le fichier CSS est introuvable, on laisse le navigateur gérer l'absence de style
+            return "<h1>Erreur</h1><p>" + e.getMessage() + "</p>";
         }
     }
 
-    /**
-     * Construit la page HTML de résultats en remplissant le template avec les données de la recherche.
-     */
-    private String buildHtmlResponse(String queryString) {
+    private String buildResultsPage(String queryString) {
         try {
             Path template = assetsDir.resolve("resultats.html");
             String html = new String(Files.readAllBytes(template), StandardCharsets.UTF_8);
 
+            // Récupération du terme recherché via 'search' ou 'q'
+            String searchTerm = extractParam(queryString, "search").trim();
+            if (searchTerm.isEmpty()) {
+                searchTerm = extractParam(queryString, "q").trim();
+            }
 
             String searchTerm   = "";
             String resultsBlock = "<p>Entrez un mot-clé pour lancer la recherche.</p>";
 
-            if (queryString != null) {
-                searchTerm   = extractSearchTerm(queryString);
-                resultsBlock = buildResultsBlock(searchTerm);
+            String resultsHTML;
+            if (searchTerm.isEmpty()) {
+                resultsHTML = "<p style=\"color: var(--muted); font-style: italic;\">Entrez un mot-clé pour lancer la recherche.</p>";
+            } else {
+                resultsHTML = buildResultsBlocks(searchTerm);
             }
 
-            // Injection du terme de recherche et des résultats dans le template HTML
-            return html.replace("{{REQUETE}}", searchTerm)
-                       .replace("{{RESULTATS}}", resultsBlock);
+            // Remplacement des tags {{QUERY}} et {{RESULTS}} dans le fichier resultats.html
+            html = html.replace("{{QUERY}}", searchTerm);
+            html = html.replace("{{RESULTS}}", resultsHTML);
+            
+            return html;
 
         } catch (Exception e) {
             return "<h1>Erreur</h1><p>" + e.getMessage() + "</p>";
         }
     }
 
-    /**
-     * Extrait et décode le terme de recherche depuis la chaîne de paramètres GET.
-     */
-    private String extractSearchTerm(String queryString) {
-        for (String segment : queryString.split("&")) {
-            if (segment.startsWith("recherche=")) {
-                String rawValue = segment.substring("recherche=".length());
+    private String buildResultsBlocks(String searchTerm) {
+        SearchResult[] results = engine.search(searchTerm, threshold);
+        
+        if (results == null || results.length == 0) {
+            return "<p style=\"color: var(--muted); font-style: italic;\">Aucun document trouvé pour : " + searchTerm + "</p>";
+        }
+
+        int total = results.length;
+        int displayed = Math.min(maxResults, total);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div style=\"font-size: 14px; color: var(--muted); margin-bottom: 20px;\">")
+          .append(total).append(" résultat(s) trouvé(s)</div>\n\n");
+
+        for (int i = 0; i < displayed; i++) {
+            String url = results[i].getUrl();
+            double score = results[i].getScore();
+
+            String title = url;
+            if (url.contains("/wiki/")) {
+                String rawTitle = url.substring(url.indexOf("/wiki/") + 6);
                 try {
-                    return URLDecoder.decode(rawValue, StandardCharsets.UTF_8);
+                    title = URLDecoder.decode(rawTitle, StandardCharsets.UTF_8).replace("_", " ");
                 } catch (Exception e) {
-                    return rawValue;
+                    title = rawTitle.replace("_", " ");
                 }
+            }
+
+            // Restauration de l'affichage complet d'origine (div, liens, scores)
+            sb.append("<div class=\"result-block\" style=\"margin-bottom: 24px; font-family: 'DM Sans', sans-serif;\">\n");
+            sb.append(String.format("  <div class=\"result-url-preview\" style=\"font-size: 12px; color: var(--muted); margin-bottom: 1px; word-break: break-all;\">%s</div>\n", url));
+            sb.append(String.format("  <a href=\"%s\" target=\"_blank\" style=\"display: inline-block !important; padding: 0 !important; margin: 0 !important; font-size: 18px; color: var(--blue); text-decoration: none; font-weight: 500; line-height: 1.3;\">%s</a>\n", url, title));
+            sb.append(String.format("  <div class=\"result-score-desc\" style=\"font-size: 13px; color: #475569; margin-top: 4px;\">Score de pertinence : <strong>%.4f</strong></div>\n", score));
+            sb.append("</div>\n");
+        }
+        
+        return sb.toString();
+    }
+
+    private String extractParam(String queryString, String param) {
+        if (queryString == null) return "";
+        for (String segment : queryString.split("&")) {
+            if (segment.startsWith(param + "=")) {
+                String raw = segment.substring(param.length() + 1);
+                try { return URLDecoder.decode(raw, StandardCharsets.UTF_8); }
+                catch (Exception e) { return raw; }
             }
         }
         return "";
     }
 
-    /**
-     * Lance la recherche et construit le bloc HTML listant les résultats.
-     */
-    private String buildResultsBlock(String searchTerm) {
-        if (searchTerm.trim().isEmpty()) {
-            return "<p>Entrez un mot-clé pour lancer la recherche.</p>";
-        }
-
-        SearchResult[] results   = engine.search(searchTerm, threshold);
-        int total                = results.length;
-        int displayed            = Math.min(maxResults, total);
-
-        if (total == 0) {
-            return "<p>Aucun document trouvé pour : <b>" + searchTerm + "</b></p>";
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p>").append(total)
-          .append(" résultat(s) pour <b>").append(searchTerm).append("</b></p>");
-        sb.append("<ul>");
-        for (int i = 0; i < displayed; i++) {
-            String url   = results[i].getUrl();
-            double score = results[i].getScore();
-            sb.append("<li>")
-              .append("<a href=\"").append(url).append("\" target=\"_blank\">").append(url).append("</a>")
-              .append(" — score : ").append(String.format("%.4f", score))
-              .append("</li>");
-        }
-        sb.append("</ul>");
-        return sb.toString();
-    }
-
-    /**
-     * Envoie la réponse HTML encodée en UTF-8 au client.
-     */
-    private void sendHtmlResponse(HttpExchange exchange, String body) throws IOException {
-        byte[] responseBytes = body.getBytes(StandardCharsets.UTF_8);
-        exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
-        exchange.sendResponseHeaders(200, responseBytes.length);
+    private void sendResponse(HttpExchange exchange, String body, String contentType) throws IOException {
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", contentType);
+        exchange.sendResponseHeaders(200, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
-            os.write(responseBytes);
+            os.write(bytes);
         }
     }
 }
