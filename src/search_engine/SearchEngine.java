@@ -29,7 +29,7 @@ public class SearchEngine {
      */
     public SearchEngine(Path indexDirectory, Path lemmasDirectory) throws IOException {
         this.indexDirectory = indexDirectory;
-        List<IndexedPage> pageList = new ArrayList<>();
+        List<IndexedPage> pagesList = new ArrayList<>();
 
         System.out.println("Chargement de l'index depuis : " + indexDirectory.toAbsolutePath());
 
@@ -37,12 +37,12 @@ public class SearchEngine {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(indexDirectory)) {
             for (Path file : stream) {
                 if (Files.isRegularFile(file)) {
-                    pageList.add(new IndexedPage(file));
+                    pagesList.add(new IndexedPage(file));
                 }
             }
         }
 
-        this.pages = pageList.toArray(new IndexedPage[0]);
+        this.pages = pagesList.toArray(new IndexedPage[0]);
         System.out.println("Nombre de pages chargées : " + this.pages.length);
 
         this.lemmatizer = new Lemmatizer(
@@ -119,10 +119,10 @@ public class SearchEngine {
     public static void main(String[] args) throws Exception {
         URL location = SearchEngine.class.getProtectionDomain().getCodeSource().getLocation();
         Path binFolder    = Paths.get(location.toURI());
-        Path indexFolder  = binFolder.getParent().resolve(Paths.get("doc", "exemples-fichiers", "INDEX"));
-        Path lemmasFolder = binFolder.getParent().resolve(Paths.get("doc", "exemples-fichiers", "LEMMES"));
+        Path indexFolder  = binFolder.getParent().resolve(Paths.get("src", "assets", "exemples-fichiers", "INDEX"));
+        Path lemmasFolder = binFolder.getParent().resolve(Paths.get("src", "assets", "LEMMES"));
 
-        SearchEngine engine = new SearchEngine(indexFolder, lemmasFolder);
+        SearchEngine engine = new WandSearchEngine(indexFolder, lemmasFolder);
 
         if (args.length > 0) {
             engine.printResults(String.join(" ", args));
